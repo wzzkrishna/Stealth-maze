@@ -1,47 +1,42 @@
-# Stealth Maze
+# Stealth-maze
 
-This is my personal game development project. It includes two different game experiences made completely from scratch using basic web coding. The main project is a stealth puzzle game called **Stealth Maze PRO**, and the second one is my interactive **RPG Portfolio** layout.
-
----
-
-## 1. Stealth Maze PRO
-
-This is a 2D top-down game where you play as a character trying to escape a dangerous maze. A red enemy tracks you down, and you have to use strategy to avoid it and reach the exit.
-
-### Main Features
-* **Random Maps:** The game generates a new map automatically every time you play or change levels. As the level increases, the maze gets harder with more dead ends.
-* **Smart Enemy:** The red enemy does not cheat or walk through walls. It walks around randomly, but the moment you come into its line of sight, it starts chasing you at a fast speed.
-* **EMP Attack:** If the enemy gets too close, you can press the spacebar (or tap the EMP button on mobile) to launch a shockwave. This pushes the enemy back and freezes it for 3 seconds so you can run away.
-* **Smooth Movement:** The movement controls are fixed so your character slides smoothly along the walls instead of getting stuck or glitching at the corners.
-* **Background Music:** The game includes an option to load ambient background music that starts playing automatically on your first click or movement.
-
-### Controls
-* **Desktop:** Use `W, A, S, D` or `Arrow Keys` to move. Press `Spacebar` to use the EMP attack.
-* **Mobile:** Use the on-screen direction buttons to move and the red center button for the EMP attack. Supports pressing two buttons together for diagonal movement.
+This is a 2D top-down stealth puzzle game made completely from scratch using basic web coding. The goal of the game is to find your way through a maze, avoid an enemy ghost, and reach the exit safely.
 
 ---
 
-## 2. My RPG Portfolio Layout
+## Game Features
 
-This is a creative setup where you can move a character on a green map and walk up to different buildings representing portfolio sections like **My Education**, **My Projects**, and **Contact Me**. Pressing the action button opens up the details for that specific section.
+* **Random Maps:** The game generates a completely new maze automatically every time you play or clear a level. As you move to higher levels, the maps become much more complex with fewer open paths and more dead ends.
+* **Natural Enemy AI:** The red enemy ghost moves around the maze naturally without cheating or walking through walls. It wanders around on its own, but the moment you enter its straight line of sight, it changes to chase mode and runs after you at a fast speed.
+* **EMP Shockwave Attack:** If the ghost gets too close to you, you can press the spacebar (or tap the red EMP button on mobile screens) to launch a shockwave. This attack pushes the ghost back and freezes it in place for 3 seconds so you can escape.
+* **Smooth Wall Sliding:** The movement engine is designed so your character slides smoothly along the walls when moving diagonally, instead of getting stuck or glitching at the corners.
+* **Background Music:** The game supports a looping background music track that starts playing automatically as soon as you make your first movement or click on the screen.
+
+---
+
+## Game Controls
+
+* **Desktop:** Use `W, A, S, D` or the `Arrow Keys` to move your character. Press `Spacebar` to trigger the EMP attack.
+* **Mobile:** Use the on-screen arrow buttons to move. It supports pressing two buttons together for diagonal moving. Tap the red center button for the EMP attack.
 
 ---
 
 ## Technical Details
 
-Everything in this project is built using pure frontend code without downloading any heavy external software or game engines.
+The entire game is written in pure frontend web code without using any heavy external game engines or frameworks.
 
-* **HTML5 Canvas:** Used for drawing the maze grids, player boxes, and visual attack waves on the screen.
-* **Pure JavaScript:** Written from scratch to handle player movement logic, wall collisions, and the enemy tracking system.
-* **CSS3:** Used for the dark theme, user interface layout, and responsive mobile buttons.
+* **HTML5 Canvas:** Used for rendering the maze paths, player boxes, and drawing the visual EMP blast waves on the screen.
+* **Pure JavaScript:** Written from scratch to handle player input, wall collision detection, level transitions, and the ghost's pathfinding logic.
+* **CSS3:** Used for the dark hacker theme setup, font styles, and responsive mobile control buttons.
 
 ---
 
-## How to Setup the Code
+## Setup Instructions
 
 1. Download the `index.html` file into a folder on your computer.
-2. Inside that folder, create a new folder named `sounds`.
-3. Put your background music file inside the `sounds` folder and update this line in the code with your file name:
+2. Inside that same folder, create a new folder named `sounds`.
+3. Put your background music audio file inside the `sounds` folder.
+4. Update this line in the JavaScript code with your exact audio filename:
    ```javascript
    const bgMusic = new Audio('sounds/your-music-file.mp3');
    
