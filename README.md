@@ -28,15 +28,3 @@ The entire game is written in pure frontend web code without using any heavy ext
 * **HTML5 Canvas:** Used for rendering the maze paths, player boxes, and drawing the visual EMP blast waves on the screen.
 * **Pure JavaScript:** Written from scratch to handle player input, wall collision detection, level transitions, and the ghost's pathfinding logic.
 * **CSS3:** Used for the dark hacker theme setup, font styles, and responsive mobile control buttons.
-
----
-
-## Setup Instructions
-
-1. Download the `index.html` file into a folder on your computer.
-2. Inside that same folder, create a new folder named `sounds`.
-3. Put your background music audio file inside the `sounds` folder.
-4. Update this line in the JavaScript code with your exact audio filename:
-   ```javascript
-   const bgMusic = new Audio('sounds/your-music-file.mp3');
-   
