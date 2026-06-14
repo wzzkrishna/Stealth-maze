@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <title>Stealth Maze PRO | Ultimate Ghost Escape Game</title>
+    <title>Stealth Maze</title>
     <meta name="description" content="Play the ultimate Stealth Maze game. Escape the smart AI ghost, use EMP shockwaves, and solve progressively complex mazes. Can you survive?">
     <meta name="keywords" content="Stealth Maze, Ghost Escape, HTML5 Game, JavaScript Game, Play Online, Horror Maze">
     
@@ -21,7 +21,6 @@
             min-height: 100vh; overflow: hidden; font-family: 'Poppins', sans-serif;
         }
         
-        /* HUD Display */
         .hud {
             display: flex; justify-content: space-between; align-items: center;
             width: 95%; max-width: 800px; padding: 10px 20px;
@@ -31,6 +30,17 @@
         }
 
         .hud-text { font-family: 'Orbitron', sans-serif; font-size: 18px; color: #00d2ff; text-shadow: 0 0 8px rgba(0, 210, 255, 0.6); }
+        
+        .hud-controls { display: flex; align-items: center; gap: 15px; }
+        
+        .mute-btn {
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+            font-family: 'Orbitron', sans-serif; font-size: 12px; transition: all 0.2s;
+        }
+        .mute-btn:active { transform: scale(0.95); }
+        .mute-btn.muted { border-color: #ef4444; color: #ef4444; }
+
         .hud-emp { font-family: 'Orbitron', sans-serif; font-size: 16px; color: #39d353; font-weight: bold; transition: color 0.3s; }
         .emp-cooldown { color: #ef4444; }
 
@@ -39,7 +49,6 @@
             max-width: 95%; max-height: 55vh; box-shadow: 0 0 30px rgba(0, 210, 255, 0.1), inset 0 0 20px rgba(0,0,0,0.8);
         }
 
-        /* Death Screen */
         #death-screen {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
             background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px);
@@ -56,7 +65,6 @@
             color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer;
         }
 
-        /* Controls */
         .controls {
             display: grid; grid-template-columns: repeat(3, 65px); grid-template-rows: repeat(3, 65px);
             gap: 8px; margin-top: 20px;
@@ -86,7 +94,10 @@
 
     <div class="hud">
         <div class="hud-text" id="level-display">LEVEL: 1</div>
-        <div class="hud-emp" id="emp-status">EMP: READY</div>
+        <div class="hud-controls">
+            <button class="mute-btn" id="mute-toggle">AUDIO: ON</button>
+            <div class="hud-emp" id="emp-status">EMP: READY</div>
+        </div>
     </div>
 
     <div style="position: relative;">
@@ -108,21 +119,46 @@
     </div>
 
     <script>
-        // --- 🎵 ONLY ONE BG MUSIC SETUP 🎵 ---
-        // Yahan apni download ki hui background music file ka path dalo (e.g., 'sounds/music.mp3')
         const bgMusic = new Audio('/restum-anoush-quotshadow-realmquotfast-music-rhythmimpulsivenesssound-effect-261102.mp3'); 
         bgMusic.loop = true;
         let isMusicPlaying = false;
+        let isMuted = false;
 
         function startMusicSafely() {
+            if (isMuted) return;
             if (!isMusicPlaying && bgMusic.src && bgMusic.src !== window.location.href) {
                 bgMusic.play().then(() => {
                     isMusicPlaying = true;
-                }).catch(e => console.log("Waiting for user interaction to play music."));
+                }).catch(e => console.log("Audio pipeline waiting for interaction"));
             }
         }
 
-        // --- GAME SYSTEM ---
+        const muteBtn = document.getElementById("mute-toggle");
+        muteBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (!isMusicPlaying && !isMuted) {
+                isMuted = true;
+                muteBtn.innerText = "AUDIO: OFF";
+                muteBtn.classList.add("muted");
+                return;
+            }
+            if (isMuted) {
+                isMuted = false;
+                muteBtn.innerText = "AUDIO: ON";
+                muteBtn.classList.remove("muted");
+                if (gameState === "PLAYING") {
+                    isMusicPlaying = false;
+                    startMusicSafely();
+                }
+            } else {
+                isMuted = true;
+                bgMusic.pause();
+                isMusicPlaying = false;
+                muteBtn.innerText = "AUDIO: OFF";
+                muteBtn.classList.add("muted");
+            }
+        });
+
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const empStatus = document.getElementById("emp-status");
@@ -138,7 +174,6 @@
         const tileSize = 40; const cols = 20; const rows = 15; 
         let maze = [];
 
-        // Entities
         let player = { x: 45, y: 45, size: 22, speed: 4.5, color: "#00d2ff" };
         let ghost = { 
             x: 0, y: 0, size: 24, speed: 1.5, color: "#ef4444", 
@@ -148,7 +183,6 @@
 
         let emp = { ready: true, cooldownTime: 5000, lastUse: 0, radius: 120, pulseActive: false, pulseRadius: 0 };
 
-        // --- DYNAMIC MAZE GENERATOR ---
         function generateMaze() {
             for (let r = 0; r < rows; r++) { maze[r] = []; for (let c = 0; c < cols; c++) maze[r][c] = 1; }
             let stack = []; maze[1][1] = 0; stack.push({r: 1, c: 1});
@@ -170,7 +204,6 @@
                 } else { stack.pop(); }
             }
 
-            // COMPLEXITY ENGINE: Harder levels = less loops = pure dead ends
             let extraLoops = Math.max(2, 20 - (currentLevel * 3)); 
             for (let i = 0; i < extraLoops; i++) {
                 let r = Math.floor(Math.random() * (rows - 2)) + 1;
@@ -194,10 +227,9 @@
             empStatus.innerText = "EMP: READY"; empStatus.className = "hud-emp";
         }
 
-        // --- EMP ATTACK LOGIC ---
         function triggerEMP() {
             if (!emp.ready || gameState !== "PLAYING") return;
-            startMusicSafely(); // Start music on click if not already playing
+            startMusicSafely(); 
 
             emp.ready = false; emp.lastUse = Date.now(); emp.pulseActive = true; emp.pulseRadius = player.size / 2;
             actionBtn.classList.add("cooldown");
@@ -243,14 +275,13 @@
         }
 
         function isWall(newX, newY, size) {
-            let margin = 3; // Fitted margin for smooth bounds
+            let margin = 3; 
             let left = Math.floor((newX + margin) / tileSize), right = Math.floor((newX + size - margin) / tileSize);
             let top = Math.floor((newY + margin) / tileSize), bottom = Math.floor((newY + size - margin) / tileSize);
             if (left < 0 || right >= cols || top < 0 || bottom >= rows) return true;
             return (maze[top][left] === 1 || maze[top][right] === 1 || maze[bottom][left] === 1 || maze[bottom][right] === 1);
         }
 
-        // --- 🚀 NEW SMOOTH WALL SLIDING ENGINE 🚀 ---
         function handlePlayerMovement() {
             let dx = 0, dy = 0;
             if (keys.up) dy -= 1; if (keys.down) dy += 1;
@@ -261,7 +292,6 @@
             let moveX = dx * player.speed;
             let moveY = dy * player.speed;
 
-            // Check X and Y independently to allow perfect, buttery smooth sliding
             if (!isWall(player.x + moveX, player.y, player.size)) {
                 player.x += moveX;
             }
@@ -270,12 +300,10 @@
             }
         }
 
-        // --- GAME LOOP ---
         function updateGame() {
             if (gameState === "GAME_OVER") return;
             ctx.fillStyle = "rgba(15, 17, 21, 1)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Auto level transition render
             if (gameState === "LEVEL_TRANSITION") {
                 drawWorld();
                 ctx.fillStyle = `rgba(0, 0, 0, ${transitionAlpha * 0.7})`; ctx.fillRect(0,0, canvas.width, canvas.height);
@@ -413,6 +441,7 @@
 
         function playerDeath() {
             gameState = "GAME_OVER"; deathScreen.style.display = "flex";
+            if (isMusicPlaying) { bgMusic.pause(); isMusicPlaying = false; }
             setTimeout(() => deathScreen.classList.add("show"), 10);
         }
 
@@ -421,13 +450,14 @@
             setTimeout(() => {
                 deathScreen.style.display = "none"; currentLevel = 1;
                 levelDisplay.innerText = "LEVEL: " + currentLevel; generateMaze();
-                gameState = "PLAYING"; requestAnimationFrame(updateGame);
+                gameState = "PLAYING"; 
+                if (!isMuted) startMusicSafely();
+                requestAnimationFrame(updateGame);
             }, 300);
         }
 
-        // --- INPUTS & AUTO-MUSIC ACTIVATION ---
         const setKey = (key, state) => {
-            startMusicSafely(); // Activating music on first input trigger
+            startMusicSafely(); 
             if (key === "ArrowUp" || key === "w" || key === "up") keys.up = state;
             if (key === "ArrowDown" || key === "s" || key === "down") keys.down = state;
             if (key === "ArrowLeft" || key === "a" || key === "left") keys.left = state;
