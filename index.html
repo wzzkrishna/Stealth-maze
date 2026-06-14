@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>Stealth Maze PRO | Ultimate Ghost Escape Game</title>
+    <meta name="description" content="Play the ultimate Stealth Maze game. Escape the smart AI ghost, use EMP shockwaves, and solve progressively complex mazes. Can you survive?">
+    <meta name="keywords" content="Stealth Maze, Ghost Escape, HTML5 Game, JavaScript Game, Play Online, Horror Maze">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@400;600&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background-color: #050505;
+            background-image: radial-gradient(circle at 50% 50%, #111827 0%, #000000 100%);
+            color: white;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; overflow: hidden; font-family: 'Poppins', sans-serif;
+        }
+        
+        /* HUD Display */
+        .hud {
+            display: flex; justify-content: space-between; align-items: center;
+            width: 95%; max-width: 800px; padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+            margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .hud-text { font-family: 'Orbitron', sans-serif; font-size: 18px; color: #00d2ff; text-shadow: 0 0 8px rgba(0, 210, 255, 0.6); }
+        .hud-emp { font-family: 'Orbitron', sans-serif; font-size: 16px; color: #39d353; font-weight: bold; transition: color 0.3s; }
+        .emp-cooldown { color: #ef4444; }
+
+        canvas {
+            background-color: #0f1115; border: 2px solid rgba(255,255,255,0.1); border-radius: 12px;
+            max-width: 95%; max-height: 55vh; box-shadow: 0 0 30px rgba(0, 210, 255, 0.1), inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        /* Death Screen */
+        #death-screen {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px);
+            padding: 40px; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+            text-align: center; display: none; flex-direction: column; gap: 20px;
+            box-shadow: 0 20px 50px rgba(255,0,0,0.5); opacity: 0; transition: all 0.3s ease;
+            z-index: 100;
+        }
+        #death-screen.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        #death-screen h1 { font-family: 'Orbitron', sans-serif; font-size: 40px; margin: 0; color: #ef4444; }
+        #death-screen p { color: #9ca3af; font-size: 16px; margin: 0; }
+        #death-screen button { 
+            padding: 12px 25px; background: linear-gradient(90deg, #ef4444, #b91c1c); 
+            color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer;
+        }
+
+        /* Controls */
+        .controls {
+            display: grid; grid-template-columns: repeat(3, 65px); grid-template-rows: repeat(3, 65px);
+            gap: 8px; margin-top: 20px;
+        }
+        .btn {
+            background: linear-gradient(145deg, #1f2937, #111827); color: #9ca3af;
+            border: 1px solid rgba(255,255,255,0.05); border-radius: 15px; font-size: 24px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.5), -2px -2px 10px rgba(255,255,255,0.02);
+            transition: all 0.1s ease;
+        }
+        .btn.active { background: #2563eb; color: white; box-shadow: inset 4px 4px 10px rgba(0,0,0,0.5); border-color: #3b82f6; text-shadow: 0 0 10px white;}
+        #up { grid-column: 2; grid-row: 1; border-top-left-radius: 20px; border-top-right-radius: 20px; }
+        #left { grid-column: 1; grid-row: 2; border-top-left-radius: 20px; border-bottom-left-radius: 20px; }
+        #action { 
+            grid-column: 2; grid-row: 2; background: radial-gradient(circle, #ef4444, #b91c1c); 
+            border-radius: 50%; color: white; font-family: 'Orbitron', sans-serif; font-size: 14px;
+            border: 2px solid #f87171; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); cursor: pointer;
+        }
+        #action:active { transform: scale(0.9); box-shadow: 0 0 5px rgba(239, 68, 68, 0.8); }
+        #action.cooldown { background: #555; border-color: #444; box-shadow: none; color: #888; }
+        #right { grid-column: 3; grid-row: 2; border-top-right-radius: 20px; border-bottom-right-radius: 20px; }
+        #down { grid-column: 2; grid-row: 3; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="hud">
+        <div class="hud-text" id="level-display">LEVEL: 1</div>
+        <div class="hud-emp" id="emp-status">EMP: READY</div>
+    </div>
+
+    <div style="position: relative;">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div id="death-screen">
+            <h1>YOU DIED</h1>
+            <p>The ghost caught you in the shadows.</p>
+            <button onclick="restartGame()">Restart from Level 1</button>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="up">▲</button>
+        <button class="btn" id="left">◀</button>
+        <button class="btn" id="action">EMP</button>
+        <button class="btn" id="right">▶</button>
+        <button class="btn" id="down">▼</button>
+    </div>
+
+    <script>
+        // --- 🎵 ONLY ONE BG MUSIC SETUP 🎵 ---
+        // Yahan apni download ki hui background music file ka path dalo (e.g., 'sounds/music.mp3')
+        const bgMusic = new Audio('/restum-anoush-quotshadow-realmquotfast-music-rhythmimpulsivenesssound-effect-261102.mp3'); 
+        bgMusic.loop = true;
+        let isMusicPlaying = false;
+
+        function startMusicSafely() {
+            if (!isMusicPlaying && bgMusic.src && bgMusic.src !== window.location.href) {
+                bgMusic.play().then(() => {
+                    isMusicPlaying = true;
+                }).catch(e => console.log("Waiting for user interaction to play music."));
+            }
+        }
+
+        // --- GAME SYSTEM ---
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const empStatus = document.getElementById("emp-status");
+        const actionBtn = document.getElementById("action");
+        const deathScreen = document.getElementById("death-screen");
+        const levelDisplay = document.getElementById("level-display");
+        
+        let gameState = "PLAYING"; 
+        let currentLevel = 1;
+        let transitionAlpha = 0; 
+
+        const keys = { up: false, down: false, left: false, right: false };
+        const tileSize = 40; const cols = 20; const rows = 15; 
+        let maze = [];
+
+        // Entities
+        let player = { x: 45, y: 45, size: 22, speed: 4.5, color: "#00d2ff" };
+        let ghost = { 
+            x: 0, y: 0, size: 24, speed: 1.5, color: "#ef4444", 
+            state: "WANDER", lastSeen: null, stunEndTime: 0,
+            targetC: null, targetR: null, dirC: 0, dirR: 0
+        };
+
+        let emp = { ready: true, cooldownTime: 5000, lastUse: 0, radius: 120, pulseActive: false, pulseRadius: 0 };
+
+        // --- DYNAMIC MAZE GENERATOR ---
+        function generateMaze() {
+            for (let r = 0; r < rows; r++) { maze[r] = []; for (let c = 0; c < cols; c++) maze[r][c] = 1; }
+            let stack = []; maze[1][1] = 0; stack.push({r: 1, c: 1});
+            const dirs = [ [-2, 0], [2, 0], [0, -2], [0, 2] ];
+
+            while (stack.length > 0) {
+                let current = stack[stack.length - 1];
+                let neighbors = [];
+                for (let d of dirs) {
+                    let nr = current.r + d[0], nc = current.c + d[1];
+                    if (nr > 0 && nr < rows - 1 && nc > 0 && nc < cols - 1 && maze[nr][nc] === 1) {
+                        neighbors.push({r: nr, c: nc, wr: current.r + d[0]/2, wc: current.c + d[1]/2});
+                    }
+                }
+                if (neighbors.length > 0) {
+                    let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    maze[next.wr][next.wc] = 0; maze[next.r][next.c] = 0;
+                    stack.push({r: next.r, c: next.c});
+                } else { stack.pop(); }
+            }
+
+            // COMPLEXITY ENGINE: Harder levels = less loops = pure dead ends
+            let extraLoops = Math.max(2, 20 - (currentLevel * 3)); 
+            for (let i = 0; i < extraLoops; i++) {
+                let r = Math.floor(Math.random() * (rows - 2)) + 1;
+                let c = Math.floor(Math.random() * (cols - 2)) + 1;
+                if (maze[r][c] === 1) maze[r][c] = 0;
+            }
+
+            maze[1][cols-2] = 0; maze[1][cols-3] = 0; maze[2][cols-2] = 0;
+            maze[rows-2][cols-2] = 2; maze[rows-2][cols-3] = 0; maze[rows-3][cols-2] = 0; 
+            
+            player.x = 1 * tileSize + (tileSize - player.size)/2; 
+            player.y = 1 * tileSize + (tileSize - player.size)/2;
+            
+            ghost.c = cols - 2; ghost.r = 1;
+            ghost.x = ghost.c * tileSize + (tileSize - ghost.size)/2; 
+            ghost.y = ghost.r * tileSize + (tileSize - ghost.size)/2;
+            ghost.targetC = null; ghost.targetR = null; ghost.dirC = 0; ghost.dirR = 0;
+            ghost.state = "WANDER";
+            
+            emp.ready = true; emp.pulseActive = false; actionBtn.classList.remove("cooldown");
+            empStatus.innerText = "EMP: READY"; empStatus.className = "hud-emp";
+        }
+
+        // --- EMP ATTACK LOGIC ---
+        function triggerEMP() {
+            if (!emp.ready || gameState !== "PLAYING") return;
+            startMusicSafely(); // Start music on click if not already playing
+
+            emp.ready = false; emp.lastUse = Date.now(); emp.pulseActive = true; emp.pulseRadius = player.size / 2;
+            actionBtn.classList.add("cooldown");
+            empStatus.innerText = "EMP: RECHARGING"; empStatus.className = "hud-emp emp-cooldown";
+
+            let pCenter = { x: player.x + player.size/2, y: player.y + player.size/2 };
+            let gCenter = { x: ghost.x + ghost.size/2, y: ghost.y + ghost.size/2 };
+            if (Math.hypot(gCenter.x - pCenter.x, gCenter.y - pCenter.y) < emp.radius) {
+                ghost.state = "STUNNED"; ghost.stunEndTime = Date.now() + 3000;
+                let angle = Math.atan2(gCenter.y - pCenter.y, gCenter.x - pCenter.x);
+                for(let i=0; i<80; i++) {
+                    let nX = ghost.x + Math.cos(angle), nY = ghost.y + Math.sin(angle);
+                    if (!isWall(nX, nY, ghost.size)) { ghost.x = nX; ghost.y = nY; } else break;
+                }
+                ghost.c = Math.floor((ghost.x + ghost.size/2) / tileSize);
+                ghost.r = Math.floor((ghost.y + ghost.size/2) / tileSize);
+                ghost.targetC = null; ghost.targetR = null; 
+            }
+        }
+
+        function hasLineOfSight() {
+            let gc = Math.floor((ghost.x + ghost.size/2) / tileSize), gr = Math.floor((ghost.y + ghost.size/2) / tileSize);
+            let pc = Math.floor((player.x + player.size/2) / tileSize), pr = Math.floor((player.y + player.size/2) / tileSize);
+            if (gc !== pc && gr !== pr) return false; 
+            if (gc === pc) { for (let r = Math.min(gr, pr) + 1; r < Math.max(gr, pr); r++) if (maze[r][gc] === 1) return false; return true; }
+            if (gr === pr) { for (let c = Math.min(gc, pc) + 1; c < Math.max(gc, pc); c++) if (maze[gr][c] === 1) return false; return true; }
+            return false;
+        }
+
+        function getPathTo(startC, startR, endC, endR) {
+            let q = [{c: startC, r: startR, path: []}]; let visited = new Set(); visited.add(`${startC},${startR}`);
+            let dirs = [[0,-1], [0,1], [-1,0], [1,0]];
+            while(q.length > 0) {
+                let curr = q.shift(); if(curr.c === endC && curr.r === endR) return curr.path[0];
+                for(let d of dirs) {
+                    let nc = curr.c + d[0], nr = curr.r + d[1];
+                    if(nc >= 0 && nc < cols && nr >= 0 && nr < rows && maze[nr][nc] !== 1) {
+                        let k = `${nc},${nr}`;
+                        if(!visited.has(k)) { visited.add(k); q.push({c: nc, r: nr, path: [...curr.path, {c: nc, r: nr}]}); }
+                    }
+                }
+            } return null;
+        }
+
+        function isWall(newX, newY, size) {
+            let margin = 3; // Fitted margin for smooth bounds
+            let left = Math.floor((newX + margin) / tileSize), right = Math.floor((newX + size - margin) / tileSize);
+            let top = Math.floor((newY + margin) / tileSize), bottom = Math.floor((newY + size - margin) / tileSize);
+            if (left < 0 || right >= cols || top < 0 || bottom >= rows) return true;
+            return (maze[top][left] === 1 || maze[top][right] === 1 || maze[bottom][left] === 1 || maze[bottom][right] === 1);
+        }
+
+        // --- 🚀 NEW SMOOTH WALL SLIDING ENGINE 🚀 ---
+        function handlePlayerMovement() {
+            let dx = 0, dy = 0;
+            if (keys.up) dy -= 1; if (keys.down) dy += 1;
+            if (keys.left) dx -= 1; if (keys.right) dx += 1;
+            
+            if (dx !== 0 && dy !== 0) { dx *= Math.SQRT1_2; dy *= Math.SQRT1_2; }
+
+            let moveX = dx * player.speed;
+            let moveY = dy * player.speed;
+
+            // Check X and Y independently to allow perfect, buttery smooth sliding
+            if (!isWall(player.x + moveX, player.y, player.size)) {
+                player.x += moveX;
+            }
+            if (!isWall(player.x, player.y + moveY, player.size)) {
+                player.y += moveY;
+            }
+        }
+
+        // --- GAME LOOP ---
+        function updateGame() {
+            if (gameState === "GAME_OVER") return;
+            ctx.fillStyle = "rgba(15, 17, 21, 1)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Auto level transition render
+            if (gameState === "LEVEL_TRANSITION") {
+                drawWorld();
+                ctx.fillStyle = `rgba(0, 0, 0, ${transitionAlpha * 0.7})`; ctx.fillRect(0,0, canvas.width, canvas.height);
+                ctx.fillStyle = `rgba(57, 211, 83, ${transitionAlpha})`; ctx.font = "bold 40px 'Orbitron', sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillText(`LEVEL ${currentLevel - 1} CLEARED!`, canvas.width/2, canvas.height/2 - 20);
+                ctx.fillStyle = `rgba(255, 255, 255, ${transitionAlpha})`; ctx.font = "20px 'Poppins', sans-serif";
+                ctx.fillText("Generating next maze...", canvas.width/2, canvas.height/2 + 30);
+                if(transitionAlpha < 1) transitionAlpha += 0.05;
+                requestAnimationFrame(updateGame);
+                return;
+            }
+
+            if (!emp.ready && Date.now() - emp.lastUse >= emp.cooldownTime) {
+                emp.ready = true; actionBtn.classList.remove("cooldown");
+                empStatus.innerText = "EMP: READY"; empStatus.className = "hud-emp";
+            }
+            if (ghost.state === "STUNNED" && Date.now() > ghost.stunEndTime) ghost.state = "WANDER";
+
+            handlePlayerMovement(); 
+            drawWorld();
+            updateGhostAI();
+
+            let pr = Math.floor((player.y + player.size/2) / tileSize), pc = Math.floor((player.x + player.size/2) / tileSize);
+            if (maze[pr] && maze[pr][pc] === 2) {
+                levelComplete();
+            } else if (ghost.state !== "STUNNED") { 
+                let dist = Math.hypot((player.x - ghost.x), (player.y - ghost.y));
+                if (dist < player.size - 4) playerDeath();
+            }
+
+            requestAnimationFrame(updateGame);
+        }
+
+        function drawWorld() {
+            if (emp.pulseActive) {
+                ctx.beginPath(); ctx.arc(player.x + player.size/2, player.y + player.size/2, emp.pulseRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(239, 68, 68, ${1 - emp.pulseRadius/emp.radius})`; ctx.lineWidth = 4; ctx.stroke();
+                emp.pulseRadius += 8; if (emp.pulseRadius >= emp.radius) emp.pulseActive = false;
+            }
+
+            for(let r = 0; r < rows; r++) {
+                for(let c = 0; c < cols; c++) {
+                    if(maze[r][c] === 1) {
+                        ctx.fillStyle = "#1e293b"; ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                        ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.strokeRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                    } else if (maze[r][c] === 2) {
+                        ctx.shadowBlur = 15; ctx.shadowColor = "#39d353"; ctx.fillStyle = "#39d353";
+                        ctx.fillRect(c * tileSize + 5, r * tileSize + 5, tileSize - 10, tileSize - 10); ctx.shadowBlur = 0;
+                    }
+                }
+            }
+
+            ctx.shadowBlur = 15; ctx.shadowColor = player.color; ctx.fillStyle = player.color;
+            ctx.beginPath(); ctx.roundRect(player.x, player.y, player.size, player.size, 6); ctx.fill();
+            ctx.shadowBlur = 0; ctx.fillStyle = "white";
+            ctx.fillRect(player.x + 4, player.y + 6, 4, 3); ctx.fillRect(player.x + 14, player.y + 6, 4, 3);
+        }
+
+        function updateGhostAI() {
+            if (ghost.state === "STUNNED") { drawGhost(); return; }
+
+            let pc = Math.floor((player.x + player.size/2) / tileSize);
+            let pr = Math.floor((player.y + player.size/2) / tileSize);
+
+            if (hasLineOfSight()) { ghost.state = "CHASE"; ghost.lastSeen = {c: pc, r: pr}; }
+
+            if (ghost.state === "WANDER") ghost.speed = 1.3 + (currentLevel * 0.15); 
+            if (ghost.state === "CHASE") ghost.speed = 3.2 + (currentLevel * 0.25);  
+
+            if (ghost.targetC === null || ghost.targetR === null) {
+                let nextStep = null;
+                if (ghost.state === "CHASE" && ghost.lastSeen) {
+                    nextStep = getPathTo(ghost.c, ghost.r, ghost.lastSeen.c, ghost.lastSeen.r);
+                    if (!nextStep) { ghost.state = "WANDER"; ghost.lastSeen = null; }
+                    if (nextStep) { ghost.dirC = nextStep.c - ghost.c; ghost.dirR = nextStep.r - ghost.r; }
+                } 
+                if (ghost.state === "WANDER") {
+                    let dirs = [[0,-1], [0,1], [-1,0], [1,0]];
+                    let valid = []; let backward = null;
+                    for (let d of dirs) {
+                        let nc = ghost.c + d[0], nr = ghost.r + d[1];
+                        if (maze[nr] && maze[nr][nc] !== 1) {
+                            if (ghost.dirC === -d[0] && ghost.dirR === -d[1]) backward = {c: nc, r: nr, dc: d[0], dr: d[1]};
+                            else valid.push({c: nc, r: nr, dc: d[0], dr: d[1]}); 
+                        }
+                    }
+                    if (valid.length > 0) {
+                        let choice = valid[Math.floor(Math.random() * valid.length)];
+                        nextStep = {c: choice.c, r: choice.r}; ghost.dirC = choice.dc; ghost.dirR = choice.dr;
+                    } else if (backward) {
+                        nextStep = {c: backward.c, r: backward.r}; ghost.dirC = backward.dc; ghost.dirR = backward.dr;
+                    }
+                }
+                if (nextStep) { ghost.targetC = nextStep.c; ghost.targetR = nextStep.r; }
+            }
+
+            if (ghost.targetC !== null && ghost.targetR !== null) {
+                let gCenterOff = (tileSize - ghost.size) / 2;
+                let tX = ghost.targetC * tileSize + gCenterOff, tY = ghost.targetR * tileSize + gCenterOff;
+                let dx = tX - ghost.x, dy = tY - ghost.y, dist = Math.hypot(dx, dy);
+                if (dist <= ghost.speed) {
+                    ghost.x = tX; ghost.y = tY; ghost.c = ghost.targetC; ghost.r = ghost.targetR;
+                    ghost.targetC = null; ghost.targetR = null;
+                } else {
+                    ghost.x += (dx / dist) * ghost.speed; ghost.y += (dy / dist) * ghost.speed;
+                }
+            }
+            drawGhost();
+        }
+
+        function drawGhost() {
+            ctx.shadowBlur = ghost.state === "STUNNED" ? 5 : 20; 
+            ctx.shadowColor = ghost.state === "STUNNED" ? "#3b82f6" : (ghost.state === "CHASE" ? "#ff0000" : "#ef4444");
+            ctx.fillStyle = ghost.state === "STUNNED" ? "#3b82f6" : ghost.color; 
+            ctx.beginPath(); ctx.roundRect(ghost.x, ghost.y, ghost.size, ghost.size, 6); ctx.fill();
+            ctx.shadowBlur = 0; ctx.fillStyle = "black";
+            
+            if (ghost.state === "STUNNED") {
+                ctx.fillRect(ghost.x + 4, ghost.y + 10, 5, 2); ctx.fillRect(ghost.x + 15, ghost.y + 10, 5, 2);
+            } else {
+                if(ghost.state === "CHASE") {
+                    ctx.fillRect(ghost.x + 4, ghost.y + 6, 6, 4); ctx.fillRect(ghost.x + 14, ghost.y + 6, 6, 4);
+                } else {
+                    ctx.fillRect(ghost.x + 5, ghost.y + 6, 4, 4); ctx.fillRect(ghost.x + 15, ghost.y + 6, 4, 4);
+                }
+            }
+        }
+
+        function levelComplete() {
+            currentLevel++; gameState = "LEVEL_TRANSITION"; transitionAlpha = 0;
+            setTimeout(() => {
+                levelDisplay.innerText = "LEVEL: " + currentLevel; generateMaze(); gameState = "PLAYING";
+            }, 2000);
+        }
+
+        function playerDeath() {
+            gameState = "GAME_OVER"; deathScreen.style.display = "flex";
+            setTimeout(() => deathScreen.classList.add("show"), 10);
+        }
+
+        function restartGame() {
+            deathScreen.classList.remove("show");
+            setTimeout(() => {
+                deathScreen.style.display = "none"; currentLevel = 1;
+                levelDisplay.innerText = "LEVEL: " + currentLevel; generateMaze();
+                gameState = "PLAYING"; requestAnimationFrame(updateGame);
+            }, 300);
+        }
+
+        // --- INPUTS & AUTO-MUSIC ACTIVATION ---
+        const setKey = (key, state) => {
+            startMusicSafely(); // Activating music on first input trigger
+            if (key === "ArrowUp" || key === "w" || key === "up") keys.up = state;
+            if (key === "ArrowDown" || key === "s" || key === "down") keys.down = state;
+            if (key === "ArrowLeft" || key === "a" || key === "left") keys.left = state;
+            if (key === "ArrowRight" || key === "d" || key === "right") keys.right = state;
+            if (key === " " && state) triggerEMP(); 
+        };
+
+        window.addEventListener("keydown", (e) => setKey(e.key, true)); 
+        window.addEventListener("keyup", (e) => setKey(e.key, false));
+
+        const setupButton = (id) => {
+            const btn = document.getElementById(id);
+            const press = (e) => { e.preventDefault(); setKey(id, true); btn.classList.add("active"); };
+            const release = (e) => { e.preventDefault(); setKey(id, false); btn.classList.remove("active"); };
+            btn.addEventListener("touchstart", press); btn.addEventListener("touchend", release);
+            btn.addEventListener("mousedown", press); window.addEventListener("mouseup", release);
+        };
+
+        ["up", "down", "left", "right"].forEach(setupButton);
+        actionBtn.addEventListener("mousedown", (e) => { e.preventDefault(); triggerEMP(); });
+        actionBtn.addEventListener("touchstart", (e) => { e.preventDefault(); triggerEMP(); });
+
+        generateMaze(); 
+        updateGame();
+    </script>
+</body>
+</html>
