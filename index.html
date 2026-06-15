@@ -5,108 +5,264 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <title>Stealth Maze</title>
-    <meta name="description" content="Play the ultimate Stealth Maze game. Escape the smart AI ghost, use EMP shockwaves, and solve progressively complex mazes. Can you survive?">
-    <meta name="keywords" content="Stealth Maze, Ghost Escape, HTML5 Game, JavaScript Game, Play Online, Horror Maze">
+    <meta name="description" content="Play the ultimate Stealth Maze game. Escape the smart AI ghost, use EMP shockwaves, and solve progressively complex mazes.">
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@400;600&display=swap');
         
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            user-select: none; -webkit-tap-highlight-color: transparent; 
+        }
         
         body {
             background-color: #050505;
-            background-image: radial-gradient(circle at 50% 50%, #111827 0%, #000000 100%);
+            background-image: radial-gradient(circle at center, #111827 0%, #000000 100%);
             color: white;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            min-height: 100vh; overflow: hidden; font-family: 'Poppins', sans-serif;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            min-height: 100vh; 
+            overflow: hidden; 
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Container to keep HUD and Canvas perfectly aligned */
+        #game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+            padding: 10px;
         }
         
         .hud {
-            display: flex; justify-content: space-between; align-items: center;
-            width: 95%; max-width: 800px; padding: 10px 20px;
-            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
-            margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            width: 100%; 
+            padding: 12px 25px;
+            background: rgba(255, 255, 255, 0.03); 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 12px;
+            margin-bottom: 15px; 
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
         }
 
-        .hud-text { font-family: 'Orbitron', sans-serif; font-size: 18px; color: #00d2ff; text-shadow: 0 0 8px rgba(0, 210, 255, 0.6); }
+        .hud-text { 
+            font-family: 'Orbitron', sans-serif; 
+            font-size: 20px; 
+            color: #00d2ff; 
+            text-shadow: 0 0 10px rgba(0, 210, 255, 0.8); 
+            font-weight: 700;
+        }
         
-        .hud-controls { display: flex; align-items: center; gap: 15px; }
+        .hud-controls { 
+            display: flex; 
+            align-items: center; 
+            gap: 20px; 
+        }
         
         .mute-btn {
-            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.2);
-            color: #fff; padding: 5px 12px; border-radius: 6px; cursor: pointer;
-            font-family: 'Orbitron', sans-serif; font-size: 12px; transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.05); 
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff; 
+            padding: 6px 15px; 
+            border-radius: 8px; 
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif; 
+            font-size: 13px; 
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
         }
+        
+        .mute-btn:hover { background: rgba(255, 255, 255, 0.1); }
         .mute-btn:active { transform: scale(0.95); }
-        .mute-btn.muted { border-color: #ef4444; color: #ef4444; }
+        .mute-btn.muted { 
+            border-color: #ef4444; 
+            color: #ef4444; 
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+        }
 
-        .hud-emp { font-family: 'Orbitron', sans-serif; font-size: 16px; color: #39d353; font-weight: bold; transition: color 0.3s; }
-        .emp-cooldown { color: #ef4444; }
+        .hud-emp { 
+            font-family: 'Orbitron', sans-serif; 
+            font-size: 18px; 
+            color: #39d353; 
+            font-weight: bold; 
+            text-shadow: 0 0 10px rgba(57, 211, 83, 0.6);
+            transition: color 0.3s, text-shadow 0.3s; 
+        }
+        
+        .emp-cooldown { 
+            color: #ef4444; 
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+        }
+
+        /* Canvas Wrapper for relative positioning of death screen */
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
 
         canvas {
-            background-color: #0f1115; border: 2px solid rgba(255,255,255,0.1); border-radius: 12px;
-            max-width: 95%; max-height: 55vh; box-shadow: 0 0 30px rgba(0, 210, 255, 0.1), inset 0 0 20px rgba(0,0,0,0.8);
+            background-color: #0a0c10; 
+            border: 2px solid rgba(0, 210, 255, 0.2); 
+            border-radius: 12px;
+            max-width: 100%; 
+            /* Auto scaling height based on width to maintain aspect ratio on small screens */
+            height: auto; 
+            box-shadow: 0 0 40px rgba(0, 210, 255, 0.15), inset 0 0 30px rgba(0,0,0,0.8);
         }
 
         #death-screen {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px);
-            padding: 40px; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
-            text-align: center; display: none; flex-direction: column; gap: 20px;
-            box-shadow: 0 20px 50px rgba(255,0,0,0.5); opacity: 0; transition: all 0.3s ease;
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(15, 23, 42, 0.95); 
+            backdrop-filter: blur(20px);
+            padding: 40px 50px; 
+            border: 1px solid rgba(239, 68, 68, 0.3); 
+            border-radius: 20px;
+            text-align: center; 
+            display: none; 
+            flex-direction: column; 
+            gap: 20px;
+            box-shadow: 0 20px 60px rgba(239, 68, 68, 0.4); 
+            opacity: 0; 
+            transition: all 0.3s ease;
             z-index: 100;
         }
+        
         #death-screen.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        #death-screen h1 { font-family: 'Orbitron', sans-serif; font-size: 40px; margin: 0; color: #ef4444; }
-        #death-screen p { color: #9ca3af; font-size: 16px; margin: 0; }
+        
+        #death-screen h1 { 
+            font-family: 'Orbitron', sans-serif; 
+            font-size: 45px; 
+            margin: 0; 
+            color: #ef4444; 
+            text-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+        }
+        
+        #death-screen p { color: #9ca3af; font-size: 16px; margin: 0; letter-spacing: 1px;}
+        
         #death-screen button { 
-            padding: 12px 25px; background: linear-gradient(90deg, #ef4444, #b91c1c); 
-            color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer;
+            padding: 15px 30px; 
+            background: linear-gradient(90deg, #ef4444, #b91c1c); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 18px; 
+            font-weight: 600; 
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+            transition: all 0.2s;
+            font-family: 'Orbitron', sans-serif;
         }
+        
+        #death-screen button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(239, 68, 68, 0.6); }
+        #death-screen button:active { transform: translateY(1px); }
 
+        /* --- SMART CONTROLS --- */
         .controls {
-            display: grid; grid-template-columns: repeat(3, 65px); grid-template-rows: repeat(3, 65px);
-            gap: 8px; margin-top: 20px;
+            display: grid; 
+            grid-template-columns: repeat(3, 70px); 
+            grid-template-rows: repeat(3, 70px);
+            gap: 10px; 
+            margin-top: 30px;
         }
+        
         .btn {
-            background: linear-gradient(145deg, #1f2937, #111827); color: #9ca3af;
-            border: 1px solid rgba(255,255,255,0.05); border-radius: 15px; font-size: 24px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 4px 4px 10px rgba(0,0,0,0.5), -2px -2px 10px rgba(255,255,255,0.02);
+            background: linear-gradient(145deg, #1f2937, #111827); 
+            color: #9ca3af;
+            border: 1px solid rgba(255,255,255,0.08); 
+            border-radius: 18px; 
+            font-size: 26px;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.6), -2px -2px 10px rgba(255,255,255,0.03);
             transition: all 0.1s ease;
+            cursor: pointer;
         }
-        .btn.active { background: #2563eb; color: white; box-shadow: inset 4px 4px 10px rgba(0,0,0,0.5); border-color: #3b82f6; text-shadow: 0 0 10px white;}
-        #up { grid-column: 2; grid-row: 1; border-top-left-radius: 20px; border-top-right-radius: 20px; }
-        #left { grid-column: 1; grid-row: 2; border-top-left-radius: 20px; border-bottom-left-radius: 20px; }
+        
+        .btn.active, .btn:active { 
+            background: #2563eb; 
+            color: white; 
+            box-shadow: inset 4px 4px 10px rgba(0,0,0,0.5), 0 0 15px rgba(37, 99, 235, 0.6); 
+            border-color: #3b82f6; 
+            text-shadow: 0 0 10px white;
+        }
+        
+        #up { grid-column: 2; grid-row: 1; border-top-left-radius: 25px; border-top-right-radius: 25px; }
+        #left { grid-column: 1; grid-row: 2; border-top-left-radius: 25px; border-bottom-left-radius: 25px; }
+        
         #action { 
-            grid-column: 2; grid-row: 2; background: radial-gradient(circle, #ef4444, #b91c1c); 
-            border-radius: 50%; color: white; font-family: 'Orbitron', sans-serif; font-size: 14px;
-            border: 2px solid #f87171; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); cursor: pointer;
+            grid-column: 2; grid-row: 2; 
+            background: radial-gradient(circle, #ef4444, #b91c1c); 
+            border-radius: 50%; 
+            color: white; 
+            font-family: 'Orbitron', sans-serif; 
+            font-size: 15px; font-weight: bold;
+            border: 2px solid #f87171; 
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); 
         }
-        #action:active { transform: scale(0.9); box-shadow: 0 0 5px rgba(239, 68, 68, 0.8); }
-        #action.cooldown { background: #555; border-color: #444; box-shadow: none; color: #888; }
-        #right { grid-column: 3; grid-row: 2; border-top-right-radius: 20px; border-bottom-right-radius: 20px; }
-        #down { grid-column: 2; grid-row: 3; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; }
+        
+        #action.active, #action:active { transform: scale(0.9); box-shadow: 0 0 10px rgba(239, 68, 68, 0.8); }
+        #action.cooldown { 
+            background: #333; 
+            border-color: #444; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8); 
+            color: #666; 
+        }
+        
+        #right { grid-column: 3; grid-row: 2; border-top-right-radius: 25px; border-bottom-right-radius: 25px; }
+        #down { grid-column: 2; grid-row: 3; border-bottom-left-radius: 25px; border-bottom-right-radius: 25px; }
+
+        /* MAGIC TRICK: HIDE CONTROLS ON PC/LAPTOP */
+        @media (min-width: 768px) {
+            .controls {
+                display: none;
+            }
+        }
+        
+        /* Better padding for smaller mobiles */
+        @media (max-width: 500px) {
+            .hud { padding: 10px 15px; }
+            .hud-text { font-size: 16px; }
+            .hud-emp { font-size: 14px; }
+            .controls { 
+                grid-template-columns: repeat(3, 60px); 
+                grid-template-rows: repeat(3, 60px);
+                gap: 8px;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <div class="hud">
-        <div class="hud-text" id="level-display">LEVEL: 1</div>
-        <div class="hud-controls">
-            <button class="mute-btn" id="mute-toggle">AUDIO: ON</button>
-            <div class="hud-emp" id="emp-status">EMP: READY</div>
+    <div id="game-wrapper">
+        <div class="hud">
+            <div class="hud-text" id="level-display">LEVEL: 1</div>
+            <div class="hud-controls">
+                <button class="mute-btn" id="mute-toggle">AUDIO: ON</button>
+                <div class="hud-emp" id="emp-status">EMP: READY</div>
+            </div>
         </div>
-    </div>
 
-    <div style="position: relative;">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        
-        <div id="death-screen">
-            <h1>YOU DIED</h1>
-            <p>The ghost caught you in the shadows.</p>
-            <button onclick="restartGame()">Restart from Level 1</button>
+        <div class="canvas-container">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            
+            <div id="death-screen">
+                <h1>YOU DIED</h1>
+                <p>The Ghost caught you in the shadows.</p>
+                <button onclick="restartGame()">RESTART</button>
+            </div>
         </div>
     </div>
 
@@ -119,6 +275,7 @@
     </div>
 
     <script>
+        // --- GAME LOGIC ---
         const bgMusic = new Audio('/restum-anoush-quotshadow-realmquotfast-music-rhythmimpulsivenesssound-effect-261102.mp3'); 
         bgMusic.loop = true;
         let isMusicPlaying = false;
@@ -302,14 +459,19 @@
 
         function updateGame() {
             if (gameState === "GAME_OVER") return;
-            ctx.fillStyle = "rgba(15, 17, 21, 1)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "rgba(10, 12, 16, 1)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             if (gameState === "LEVEL_TRANSITION") {
                 drawWorld();
-                ctx.fillStyle = `rgba(0, 0, 0, ${transitionAlpha * 0.7})`; ctx.fillRect(0,0, canvas.width, canvas.height);
-                ctx.fillStyle = `rgba(57, 211, 83, ${transitionAlpha})`; ctx.font = "bold 40px 'Orbitron', sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillStyle = `rgba(0, 0, 0, ${transitionAlpha * 0.8})`; ctx.fillRect(0,0, canvas.width, canvas.height);
+                ctx.fillStyle = `rgba(57, 211, 83, ${transitionAlpha})`; 
+                ctx.font = "bold 45px 'Orbitron', sans-serif"; 
+                ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.shadowBlur = 10; ctx.shadowColor = "#39d353";
                 ctx.fillText(`LEVEL ${currentLevel - 1} CLEARED!`, canvas.width/2, canvas.height/2 - 20);
-                ctx.fillStyle = `rgba(255, 255, 255, ${transitionAlpha})`; ctx.font = "20px 'Poppins', sans-serif";
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = `rgba(255, 255, 255, ${transitionAlpha})`; 
+                ctx.font = "20px 'Poppins', sans-serif";
                 ctx.fillText("Generating next maze...", canvas.width/2, canvas.height/2 + 30);
                 if(transitionAlpha < 1) transitionAlpha += 0.05;
                 requestAnimationFrame(updateGame);
@@ -340,7 +502,7 @@
         function drawWorld() {
             if (emp.pulseActive) {
                 ctx.beginPath(); ctx.arc(player.x + player.size/2, player.y + player.size/2, emp.pulseRadius, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(239, 68, 68, ${1 - emp.pulseRadius/emp.radius})`; ctx.lineWidth = 4; ctx.stroke();
+                ctx.strokeStyle = `rgba(239, 68, 68, ${1 - emp.pulseRadius/emp.radius})`; ctx.lineWidth = 5; ctx.stroke();
                 emp.pulseRadius += 8; if (emp.pulseRadius >= emp.radius) emp.pulseActive = false;
             }
 
@@ -348,10 +510,10 @@
                 for(let c = 0; c < cols; c++) {
                     if(maze[r][c] === 1) {
                         ctx.fillStyle = "#1e293b"; ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
-                        ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.strokeRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                        ctx.strokeStyle = "rgba(0, 210, 255, 0.08)"; ctx.strokeRect(c * tileSize, r * tileSize, tileSize, tileSize);
                     } else if (maze[r][c] === 2) {
-                        ctx.shadowBlur = 15; ctx.shadowColor = "#39d353"; ctx.fillStyle = "#39d353";
-                        ctx.fillRect(c * tileSize + 5, r * tileSize + 5, tileSize - 10, tileSize - 10); ctx.shadowBlur = 0;
+                        ctx.shadowBlur = 20; ctx.shadowColor = "#39d353"; ctx.fillStyle = "#39d353";
+                        ctx.fillRect(c * tileSize + 6, r * tileSize + 6, tileSize - 12, tileSize - 12); ctx.shadowBlur = 0;
                     }
                 }
             }
@@ -415,7 +577,7 @@
         }
 
         function drawGhost() {
-            ctx.shadowBlur = ghost.state === "STUNNED" ? 5 : 20; 
+            ctx.shadowBlur = ghost.state === "STUNNED" ? 10 : 20; 
             ctx.shadowColor = ghost.state === "STUNNED" ? "#3b82f6" : (ghost.state === "CHASE" ? "#ff0000" : "#ef4444");
             ctx.fillStyle = ghost.state === "STUNNED" ? "#3b82f6" : ghost.color; 
             ctx.beginPath(); ctx.roundRect(ghost.x, ghost.y, ghost.size, ghost.size, 6); ctx.fill();
@@ -458,10 +620,10 @@
 
         const setKey = (key, state) => {
             startMusicSafely(); 
-            if (key === "ArrowUp" || key === "w" || key === "up") keys.up = state;
-            if (key === "ArrowDown" || key === "s" || key === "down") keys.down = state;
-            if (key === "ArrowLeft" || key === "a" || key === "left") keys.left = state;
-            if (key === "ArrowRight" || key === "d" || key === "right") keys.right = state;
+            if (key === "ArrowUp" || key === "w" || key === "W" || key === "up") keys.up = state;
+            if (key === "ArrowDown" || key === "s" || key === "S" || key === "down") keys.down = state;
+            if (key === "ArrowLeft" || key === "a" || key === "A" || key === "left") keys.left = state;
+            if (key === "ArrowRight" || key === "d" || key === "D" || key === "right") keys.right = state;
             if (key === " " && state) triggerEMP(); 
         };
 
@@ -472,13 +634,21 @@
             const btn = document.getElementById(id);
             const press = (e) => { e.preventDefault(); setKey(id, true); btn.classList.add("active"); };
             const release = (e) => { e.preventDefault(); setKey(id, false); btn.classList.remove("active"); };
-            btn.addEventListener("touchstart", press); btn.addEventListener("touchend", release);
-            btn.addEventListener("mousedown", press); window.addEventListener("mouseup", release);
+            btn.addEventListener("touchstart", press, {passive: false}); 
+            btn.addEventListener("touchend", release, {passive: false});
+            btn.addEventListener("mousedown", press); 
+            window.addEventListener("mouseup", release);
         };
 
         ["up", "down", "left", "right"].forEach(setupButton);
-        actionBtn.addEventListener("mousedown", (e) => { e.preventDefault(); triggerEMP(); });
-        actionBtn.addEventListener("touchstart", (e) => { e.preventDefault(); triggerEMP(); });
+        
+        const actionPress = (e) => { e.preventDefault(); triggerEMP(); actionBtn.classList.add("active"); };
+        const actionRelease = (e) => { e.preventDefault(); actionBtn.classList.remove("active"); };
+        
+        actionBtn.addEventListener("mousedown", actionPress);
+        window.addEventListener("mouseup", actionRelease);
+        actionBtn.addEventListener("touchstart", actionPress, {passive: false});
+        actionBtn.addEventListener("touchend", actionRelease, {passive: false});
 
         generateMaze(); 
         updateGame();
